@@ -1,0 +1,237 @@
+<!--  This is an HTML file containing an SVG drawing app with various functionality.
+ It contains a form element and several buttons to manipulate the drawing.
+ It also has a canvas that contains an SVG element.-->
+ <!DOCTYPE html>
+ <html>
+   <head>
+     <title>SVG Drawing</title>
+     <style>
+          /* Add a border to the SVG element */
+       svg {
+         border: 1px solid black;
+       }
+     </style>
+   </head>
+   <body>
+     <div>
+         <!-- Color picker to choose the color of the stroke -->
+       <label for="color-picker">Color:</label>
+       <input type="color" id="color-picker">
+       <!-- Color picker to choose the fill color -->    
+       <label for="fill-picker">Fill:</label>
+       <input type="color" id="fill-picker">
+       <!-- Slider to set the stroke width -->
+       <label for="stroke-width">Stroke Width:</label>
+       <input type="range" min="1" max="20" id="stroke-width">
+       <!-- Button to deselect the current element -->
+       <button id="select">Select</button>
+ 
+       <!-- Button to delete the current element -->
+       <button id="delete">Delete</button>
+ 
+       <!-- Button to save the SVG drawing as a file -->
+       <button id="save">Save</button>
+ 
+       <!-- Button to clear the fill of the current element -->
+       <button id="clear-fill">Clear Fill</button>
+ 
+       <!-- Button to draw a zigzag shape -->
+       <button id="zigzag-btn">Draw Zigzag</button>
+ 
+     </div>
+     <!-- Canvas for the SVG drawing -->
+     <svg width="500" height="500" id="canvas">
+       <rect width="100%" height="100%" fill="white" />
+     </svg>
+     <script>
+         // Get the canvas element and all the buttons and inputs
+       let canvas = document.getElementById("canvas");
+       let colorPicker = document.getElementById("color-picker");
+       let fillPicker = document.getElementById("fill-picker");
+       let strokeWidth = document.getElementById("stroke-width");
+       let selectBtn = document.getElementById("select");
+       let deleteBtn = document.getElementById("delete");
+       let saveBtn = document.getElementById("save");
+       let clearFillBtn = document.getElementById("clear-fill");
+       let zigzagBtn = document.getElementById("zigzag");
+       // Attach an event listener to the save button to save the SVG drawing as a file
+       saveBtn.addEventListener("click", saveSvg);
+ 
+       // Keep track of the currently selected element
+       let selectedElement = null;
+ 
+       // Attach an event listener to the canvas element to draw a new path when the mouse is pressed
+       canvas.addEventListener("mousedown", function (event) {
+       // Create a new path element with the current stroke color and stroke width
+         let shape = document.createElementNS(
+           "http://www.w3.org/2000/svg",
+           "path"
+         );
+         shape.setAttribute("fill", "none");
+         shape.setAttribute("stroke", colorPicker.value);
+         shape.setAttribute("stroke-width", strokeWidth.value);
+         shape.setAttribute("d", `M ${event.clientX} ${event.clientY}`);
+ 
+         // Add the new path element to the canvas
+         canvas.appendChild(shape);
+ 
+         // Keep track of the last mouse coordinates and set a flag to indicate that the user is drawing
+         let lastX = event.clientX;
+         let lastY = event.clientY;
+ 
+         let isDrawing = true;
+ 
+         // Attach an event listener to the canvas to update the path when the mouse is moved
+         canvas.addEventListener("mousemove", function (event) {
+           if (isDrawing) {
+             // Update the path data with new points for the line
+             shape.setAttribute(
+               "d",
+               `${shape.getAttribute("d")} L ${event.clientX} ${event.clientY}`
+             );
+ 
+             // Keep track of the last mouse coordinates for drawing the next segment
+             lastX = event.clientX;
+             lastY = event.clientY;
+           }
+         });
+         
+         // Attach an event listener to the canvas to stop drawing when the mouse button is released
+         canvas.addEventListener("mouseup", function (event) {
+           isDrawing = false;
+         });
+         
+         // Attach an event listener to the shape element for selecting it when clicked
+         shape.addEventListener("click", function (event) {
+             // Deselect the previously selected element
+           if (selectedElement !== null) {
+             selectedElement.removeAttribute("stroke");
+             selectedElement.removeAttribute("stroke-width");
+           }
+           // Select the clicked element and add a stroke and stroke-width to it
+ 
+           selectedElement = event.target;
+ 
+           selectedElement.setAttribute("stroke", "black");
+           selectedElement.setAttribute("stroke-width", "2");
+ 
+           // Stop the event from propagating to other elements
+           event.stopPropagation();
+         });
+       });
+ 
+       // Attach an event listener to the select button for deselecting the currently selected element
+       selectBtn.addEventListener("click", function () {
+         selectedElement = null;
+       });
+ 
+       // Attach an event listener to the save button for saving the SVG image
+       saveBtn.addEventListener("click", saveSvg);
+ 
+       // Attach an event listener to the delete button for deleting the currently selected element
+       deleteBtn.addEventListener("click", function () {
+         if (selectedElement !== null) {
+           selectedElement.parentNode.removeChild(selectedElement);
+           selectedElement = null;
+         }
+       });
+ 
+       // Attach an event listener to the clear fill button for removing the fill attribute from the currently selected element
+       
+       clearFillBtn.addEventListener("click", function () {
+         if (selectedElement) {
+             selectedElement.setAttribute("fill", "none");
+         }
+       });
+ 
+             // Attach an event listener to the zigzag button for drawing zigzag lines
+         zigzagBtn.addEventListener("click", function (event) {
+             // Remove event listeners for other drawing modes
+             canvas.removeEventListener("mousemove", drawPath);
+             canvas.removeEventListener("mousemove", drawRectangle);
+             canvas.removeEventListener("mousemove", drawEllipse);
+             // Attach event listener for drawing zigzag lines
+             canvas.addEventListener("mousemove", drawZigzag);
+         });
+ 
+ 
+       function saveSvg() {
+         // Get the SVG element as a string
+         let svgString = new XMLSerializer().serializeToString(canvas);
+ 
+         // Create a Blob object from the SVG string
+         let svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+ 
+         // Create a download URL for the Blob
+         let svgUrl = URL.createObjectURL(svgBlob);
+ 
+         // Create a link element to trigger the download
+         let downloadLink = document.createElement("a");
+         downloadLink.href = svgUrl;
+         downloadLink.download = "drawing.svg";
+ 
+         // Trigger the download
+         document.body.appendChild(downloadLink);
+         downloadLink.click();
+ 
+         // Clean up
+         document.body.removeChild(downloadLink);
+         URL.revokeObjectURL(svgUrl);
+       }
+ 
+ 
+       // Function for drawing zigzag lines
+       function drawZigzag(event) {
+         // Create a new path element for the zigzag line
+         let path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+         // Set the fill, stroke, and stroke width attributes for the path
+         path.setAttribute("fill", fillPicker.value);
+         path.setAttribute("stroke", colorPicker.value);
+         path.setAttribute("stroke-width", strokeWidth.value);
+         // Append the path to the canvas element
+ 
+         canvas.appendChild(path);
+ 
+         // Get the x and y coordinates of the mouse click
+ 
+         let x = event.clientX;
+         let y = event.clientY;
+ 
+         // Set the width, height, and number of segments for the zigzag line
+ 
+         let width = 40;
+         let height = 20;
+         let segments = 5;
+ 
+         // Initialize the path's data string with the starting point
+         let d = `M ${x} ${y}`;
+         // Initialize a flag to determine whether the line should move up or down
+         let isUp = true;
+         // Loop through the number of segments and add line segments to the path data string
+         for (let i = 0; i < segments; i++) {
+             // Calculate the x and y coordinates for the current line segment
+             let x1 = x + (isUp ? -width / 2 : width / 2);
+             let y1 = y + (isUp ? -height : height);
+             // Add the line segment to the path data string and update the current coordinates
+             d += ` L ${x1} ${y1}`;
+             x = x1;
+             y = y1;
+             // Flip the flag to change the direction of the line
+             isUp = !isUp;
+         }
+ 
+         // Set the path data attribute to the completed data string
+         path.setAttribute("d", d);
+         }
+ 
+ 
+         // Add an event listener to the fillPicker input element to change the fill color of the selected 
+       fillPicker.addEventListener("change", function () {
+         if (selectedElement !== null) {
+           selectedElement.setAttribute("fill", fillPicker.value);
+         }
+       });
+     </script>
+   </body>
+ </html>
+ 
